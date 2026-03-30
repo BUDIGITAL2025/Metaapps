@@ -30,6 +30,8 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "facebook-nodejs-business-sdk": "^24.0.1",
+    "google-ads-api": "^23.0.0",
     "next": "^16.2.1",
     "next-auth": "^5.0.0-beta.30",
     "prisma": "^5.22.0",
