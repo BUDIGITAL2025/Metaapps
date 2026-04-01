@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface DraftItem {
   id: string;
@@ -9,18 +10,41 @@ interface DraftItem {
   objective: string;
   budget: number;
   currency: string;
+  targetPage?: string;
+}
+
+interface RivkuContext {
+  project?: {
+    id: string;
+    name: string;
+    domain: string;
+    markets: string[];
+    category: string;
+    competitors: string[];
+    ticket_medio: number;
+  };
+  context?: {
+    top_pages: Array<{ url: string; sessions: number; revenue: number }>;
+    keywords: Array<{ query: string; clicks: number; position: number }>;
+    gsc_clicks: number;
+    ga4_sessions: number;
+    ga4_revenue: number;
+  };
+  rivku_user_id?: string;
 }
 
 const OBJECTIVES = [
-  { value: "AWARENESS", label: "Awareness" },
-  { value: "TRAFFIC", label: "Traffic" },
-  { value: "ENGAGEMENT", label: "Engagement" },
-  { value: "LEADS", label: "Leads" },
-  { value: "SALES", label: "Sales" },
-  { value: "APP_INSTALLS", label: "App Installs" },
+  { value: "AWARENESS", label: "Awareness", desc: "Aumentar reconhecimento da marca" },
+  { value: "TRAFFIC", label: "Traffic", desc: "Gerar visitas ao site" },
+  { value: "ENGAGEMENT", label: "Engagement", desc: "Interacoes com conteudo" },
+  { value: "LEADS", label: "Leads", desc: "Captar contactos" },
+  { value: "SALES", label: "Sales", desc: "Gerar vendas directas" },
+  { value: "APP_INSTALLS", label: "App Installs", desc: "Instalacoes de app" },
 ];
 
 export function CreateCampaignClient() {
+  const searchParams = useSearchParams();
+  const [rivkuContext, setRivkuContext] = useState<RivkuContext | null>(null);
   const [step, setStep] = useState(1);
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -32,6 +56,36 @@ export function CreateCampaignClient() {
   const [objective, setObjective] = useState("");
   const [budget, setBudget] = useState("");
   const [rows, setRows] = useState(1);
+  const [selectedPage, setSelectedPage] = useState("");
+
+  // Parse RIVKU context from URL
+  useEffect(() => {
+    const contextParam = searchParams.get("context");
+    if (contextParam) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(contextParam, "base64url").toString("utf-8")
+        );
+        setRivkuContext(decoded);
+
+        // Pre-fill based on context
+        if (decoded.project?.domain) {
+          setName(`Campanha ${decoded.project.domain}`);
+        }
+        if (decoded.context?.ga4_revenue > 0) {
+          setObjective("SALES");
+        } else {
+          setObjective("TRAFFIC");
+        }
+        // Suggest budget based on ticket medio
+        if (decoded.project?.ticket_medio) {
+          setBudget(String(Math.round(decoded.project.ticket_medio / 10)));
+        }
+      } catch (e) {
+        console.error("Failed to parse RIVKU context:", e);
+      }
+    }
+  }, [searchParams]);
 
   function togglePlatform(p: "META" | "GOOGLE") {
     const next = new Set(platforms);
@@ -54,6 +108,7 @@ export function CreateCampaignClient() {
           objective,
           budget: Number(budget) || 50,
           currency: "EUR",
+          targetPage: selectedPage || undefined,
         });
       }
     }
@@ -63,6 +118,7 @@ export function CreateCampaignClient() {
     setObjective("");
     setBudget("");
     setRows(1);
+    setSelectedPage("");
   }
 
   function removeDraft(id: string) {
@@ -82,6 +138,7 @@ export function CreateCampaignClient() {
             objective: d.objective,
             budget: d.budget,
             currency: d.currency,
+            targeting: d.targetPage ? { landing_page: d.targetPage } : undefined,
           }))
         ),
       });
@@ -107,6 +164,10 @@ export function CreateCampaignClient() {
       </span>
     );
 
+  const topPages = rivkuContext?.context?.top_pages || [];
+  const keywords = rivkuContext?.context?.keywords || [];
+  const hasRivkuContext = !!rivkuContext?.project;
+
   return (
     <div>
       <div className="mb-8">
@@ -114,9 +175,50 @@ export function CreateCampaignClient() {
           Criar Campanhas
         </h1>
         <p className="text-sm text-[var(--muted-foreground)]">
-          Cria campanhas em massa para Meta e Google Ads
+          {hasRivkuContext
+            ? `Criar campanhas para ${rivkuContext.project?.domain}`
+            : "Cria campanhas em massa para Meta e Google Ads"}
         </p>
       </div>
+
+      {/* RIVKU Context Banner */}
+      {hasRivkuContext && (
+        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center">
+              <span className="text-white text-sm font-bold">R</span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-green-800">
+                Contexto RIVKU carregado
+              </div>
+              <div className="text-xs text-green-600">
+                {rivkuContext.project?.domain} • {rivkuContext.project?.markets?.join(", ")}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="bg-white rounded-lg p-3">
+              <div className="text-lg font-bold text-green-700">
+                {rivkuContext.context?.ga4_sessions?.toLocaleString() || 0}
+              </div>
+              <div className="text-xs text-gray-500">Sessoes GA4</div>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <div className="text-lg font-bold text-green-700">
+                {rivkuContext.context?.gsc_clicks?.toLocaleString() || 0}
+              </div>
+              <div className="text-xs text-gray-500">Cliques GSC</div>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <div className="text-lg font-bold text-green-700">
+                EUR {rivkuContext.context?.ga4_revenue?.toLocaleString() || 0}
+              </div>
+              <div className="text-xs text-gray-500">Receita GA4</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Steps */}
       <div className="flex items-center gap-4 mb-8">
@@ -151,134 +253,206 @@ export function CreateCampaignClient() {
 
       {/* Step 1: Configure */}
       {step === 1 && (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Plataforma(s)
-              </label>
-              <div className="flex gap-3">
-                <label
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
-                    platforms.has("META")
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-[var(--border)] hover:bg-[var(--accent)]"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={platforms.has("META")}
-                    onChange={() => togglePlatform("META")}
-                    className="rounded"
-                  />
-                  <span className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">f</span>
-                  </span>
-                  <span className="text-sm font-medium">Meta Ads</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Form */}
+          <div className="lg:col-span-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Plataforma(s)
                 </label>
-                <label
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
-                    platforms.has("GOOGLE")
-                      ? "border-red-500 bg-red-50"
-                      : "border-[var(--border)] hover:bg-[var(--accent)]"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={platforms.has("GOOGLE")}
-                    onChange={() => togglePlatform("GOOGLE")}
-                    className="rounded"
-                  />
-                  <span className="w-6 h-6 rounded bg-red-500 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">G</span>
-                  </span>
-                  <span className="text-sm font-medium">Google Ads</span>
+                <div className="flex gap-3">
+                  <label
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
+                      platforms.has("META")
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-[var(--border)] hover:bg-[var(--accent)]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={platforms.has("META")}
+                      onChange={() => togglePlatform("META")}
+                      className="rounded"
+                    />
+                    <span className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">f</span>
+                    </span>
+                    <span className="text-sm font-medium">Meta Ads</span>
+                  </label>
+                  <label
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
+                      platforms.has("GOOGLE")
+                        ? "border-red-500 bg-red-50"
+                        : "border-[var(--border)] hover:bg-[var(--accent)]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={platforms.has("GOOGLE")}
+                      onChange={() => togglePlatform("GOOGLE")}
+                      className="rounded"
+                    />
+                    <span className="w-6 h-6 rounded bg-red-500 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">G</span>
+                    </span>
+                    <span className="text-sm font-medium">Google Ads</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Nome da Campanha
                 </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Promo Verao 2026"
+                  className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Objetivo
+                </label>
+                <select
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)]"
+                >
+                  <option value="">Selecionar objetivo</option>
+                  {OBJECTIVES.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label} — {o.desc}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Page selector from RIVKU context */}
+              {topPages.length > 0 && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Pagina a Promover (do RIVKU)
+                  </label>
+                  <select
+                    value={selectedPage}
+                    onChange={(e) => setSelectedPage(e.target.value)}
+                    className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)]"
+                  >
+                    <option value="">Selecionar pagina...</option>
+                    {topPages.map((page, i) => (
+                      <option key={i} value={page.url}>
+                        {page.url} ({page.sessions} sessoes, EUR {page.revenue})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Orcamento Diario (EUR)
+                </label>
+                <input
+                  type="number"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="50.00"
+                  className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Numero de Variacoes
+                </label>
+                <input
+                  type="number"
+                  value={rows}
+                  onChange={(e) => setRows(Math.max(1, Number(e.target.value)))}
+                  min={1}
+                  max={50}
+                  className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                />
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                  Cria multiplas variacoes da mesma campanha
+                </p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Nome da Campanha
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Promo Verão 2026"
-                className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Objetivo
-              </label>
-              <select
-                value={objective}
-                onChange={(e) => setObjective(e.target.value)}
-                className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)]"
+            <div className="flex justify-between gap-3 mt-8 pt-6 border-t border-[var(--border)]">
+              <button
+                onClick={addToDrafts}
+                disabled={!name || !objective || platforms.size === 0}
+                className="px-6 py-2 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent)] transition-colors disabled:opacity-50"
               >
-                <option value="">Selecionar objetivo</option>
-                {OBJECTIVES.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Orçamento Diário (EUR)
-              </label>
-              <input
-                type="number"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="50.00"
-                className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Número de Variações
-              </label>
-              <input
-                type="number"
-                value={rows}
-                onChange={(e) => setRows(Math.max(1, Number(e.target.value)))}
-                min={1}
-                max={50}
-                className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              />
-              <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                Cria múltiplas variações da mesma campanha
-              </p>
+                + Adicionar ao Lote ({drafts.length} campanhas)
+              </button>
+              <button
+                onClick={() => {
+                  if (drafts.length === 0) addToDrafts();
+                  if (drafts.length > 0 || (name && objective && platforms.size > 0))
+                    setStep(2);
+                }}
+                disabled={drafts.length === 0 && (!name || !objective || platforms.size === 0)}
+                className="px-6 py-2 text-sm font-medium rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                Rever Campanhas →
+              </button>
             </div>
           </div>
 
-          <div className="flex justify-between gap-3 mt-8 pt-6 border-t border-[var(--border)]">
-            <button
-              onClick={addToDrafts}
-              disabled={!name || !objective || platforms.size === 0}
-              className="px-6 py-2 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent)] transition-colors disabled:opacity-50"
-            >
-              + Adicionar ao Lote ({drafts.length} campanhas)
-            </button>
-            <button
-              onClick={() => {
-                if (drafts.length === 0) addToDrafts();
-                if (drafts.length > 0 || (name && objective && platforms.size > 0))
-                  setStep(2);
-              }}
-              disabled={drafts.length === 0 && (!name || !objective || platforms.size === 0)}
-              className="px-6 py-2 text-sm font-medium rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              Rever Campanhas →
-            </button>
-          </div>
+          {/* Sidebar with RIVKU data */}
+          {hasRivkuContext && (
+            <div className="space-y-4">
+              {/* Top Keywords */}
+              {keywords.length > 0 && (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+                  <h3 className="text-sm font-semibold text-[var(--foreground)] mb-3">
+                    Top Keywords (GSC)
+                  </h3>
+                  <div className="space-y-2">
+                    {keywords.slice(0, 5).map((kw, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span className="text-[var(--foreground)] truncate flex-1">
+                          {kw.query}
+                        </span>
+                        <span className="text-[var(--muted-foreground)] ml-2">
+                          pos {Math.round(kw.position)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Competitors */}
+              {rivkuContext.project?.competitors && rivkuContext.project.competitors.length > 0 && (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+                  <h3 className="text-sm font-semibold text-[var(--foreground)] mb-3">
+                    Concorrentes
+                  </h3>
+                  <div className="space-y-2">
+                    {rivkuContext.project.competitors.map((c, i) => (
+                      <div
+                        key={i}
+                        className="text-xs text-[var(--muted-foreground)]"
+                      >
+                        {c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -290,7 +464,7 @@ export function CreateCampaignClient() {
               Rever {drafts.length} Campanhas
             </h2>
             <span className="text-sm text-[var(--muted-foreground)]">
-              Serão criadas como PAUSED — não gastam dinheiro
+              Serao criadas como PAUSED — nao gastam dinheiro
             </span>
           </div>
           <table className="w-full">
@@ -306,10 +480,10 @@ export function CreateCampaignClient() {
                   Objetivo
                 </th>
                 <th className="text-right text-xs font-medium text-[var(--muted-foreground)] uppercase px-6 py-3">
-                  Orçamento/dia
+                  Orcamento/dia
                 </th>
                 <th className="text-right text-xs font-medium text-[var(--muted-foreground)] uppercase px-6 py-3">
-                  Ação
+                  Acao
                 </th>
               </tr>
             </thead>
@@ -327,7 +501,7 @@ export function CreateCampaignClient() {
                     {d.objective}
                   </td>
                   <td className="px-6 py-3 text-right text-sm text-[var(--foreground)]">
-                    €{d.budget.toFixed(2)}
+                    EUR {d.budget.toFixed(2)}
                   </td>
                   <td className="px-6 py-3 text-right">
                     <button
@@ -381,7 +555,7 @@ export function CreateCampaignClient() {
           </h2>
           <p className="text-sm text-[var(--muted-foreground)] mb-6">
             {drafts.length} campanhas foram guardadas como rascunho. Quando conectares as tuas contas
-            e aprovares, serão publicadas como PAUSED nas plataformas.
+            e aprovares, serao publicadas como PAUSED nas plataformas.
           </p>
           <div className="flex gap-3 justify-center">
             <button
