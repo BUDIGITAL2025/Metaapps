@@ -205,7 +205,7 @@ export function CreateCampaignClient() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Promo Verao 2026"
+                placeholder="Ex: Promo Verão 2026"
                 className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
             </div>
@@ -230,7 +230,7 @@ export function CreateCampaignClient() {
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Orcamento Diario (EUR)
+                Orçamento Diário (EUR)
               </label>
               <input
                 type="number"
@@ -243,7 +243,7 @@ export function CreateCampaignClient() {
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                Numero de Variacoes
+                Número de Variações
               </label>
               <input
                 type="number"
@@ -254,7 +254,7 @@ export function CreateCampaignClient() {
                 className="w-full px-4 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
               <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                Cria multiplas variacoes da mesma campanha
+                Cria múltiplas variações da mesma campanha
               </p>
             </div>
           </div>
@@ -290,7 +290,7 @@ export function CreateCampaignClient() {
               Rever {drafts.length} Campanhas
             </h2>
             <span className="text-sm text-[var(--muted-foreground)]">
-              Serao criadas como PAUSED — nao gastam dinheiro
+              Serão criadas como PAUSED — não gastam dinheiro
             </span>
           </div>
           <table className="w-full">
@@ -306,10 +306,10 @@ export function CreateCampaignClient() {
                   Objetivo
                 </th>
                 <th className="text-right text-xs font-medium text-[var(--muted-foreground)] uppercase px-6 py-3">
-                  Orcamento/dia
+                  Orçamento/dia
                 </th>
                 <th className="text-right text-xs font-medium text-[var(--muted-foreground)] uppercase px-6 py-3">
-                  Acao
+                  Ação
                 </th>
               </tr>
             </thead>
@@ -381,7 +381,7 @@ export function CreateCampaignClient() {
           </h2>
           <p className="text-sm text-[var(--muted-foreground)] mb-6">
             {drafts.length} campanhas foram guardadas como rascunho. Quando conectares as tuas contas
-            e aprovares, serao publicadas como PAUSED nas plataformas.
+            e aprovares, serão publicadas como PAUSED nas plataformas.
           </p>
           <div className="flex gap-3 justify-center">
             <button

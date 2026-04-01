@@ -16,22 +16,22 @@ export function MetricsCards({ totals }: { totals: Totals | null }) {
     {
       label: "Gasto Total",
       value: totals ? `€${totals.spend.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}` : "--",
-      sub: "Ultimos 30 dias",
+      sub: "Últimos 30 dias",
     },
     {
-      label: "CTR Medio",
+      label: "CTR Médio",
       value: totals ? `${totals.ctr}%` : "--",
       sub: "Click-through rate",
     },
     {
-      label: "CPC Medio",
+      label: "CPC Médio",
       value: totals ? `€${totals.cpc.toFixed(2)}` : "--",
       sub: "Custo por clique",
     },
     {
-      label: "Conversoes",
+      label: "Conversões",
       value: totals ? totals.conversions.toLocaleString("pt-PT") : "--",
-      sub: "Total de conversoes",
+      sub: "Total de conversões",
     },
   ];
 
@@ -41,7 +41,7 @@ export function MetricsCards({ totals }: { totals: Totals | null }) {
       value: totals ? `${totals.roas}x` : "--",
     },
     {
-      label: "Impressoes",
+      label: "Impressões",
       value: totals ? totals.impressions.toLocaleString("pt-PT") : "--",
     },
     {

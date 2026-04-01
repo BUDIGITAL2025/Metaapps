@@ -105,7 +105,7 @@ export function CampaignTable({ campaigns }: { campaigns: Campaign[] }) {
           <p className="text-xs mt-1">
             Vai a{" "}
             <a href="/settings" className="text-[var(--primary)] underline">
-              Definicoes
+              Definições
             </a>{" "}
             para conectar as tuas contas Meta e Google Ads
           </p>

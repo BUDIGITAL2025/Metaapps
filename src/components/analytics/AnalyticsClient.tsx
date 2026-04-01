@@ -38,12 +38,17 @@ interface MetricsResponse {
 export function AnalyticsClient() {
   const [data, setData] = useState<MetricsResponse | null>(null);
   const [days, setDays] = useState(30);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     fetch(`/api/metrics?days=${days}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setData)
-      .catch(() => null);
+      .catch(() => setError("Não foi possível carregar os dados de analytics."))
+      .finally(() => setLoading(false));
   }, [days]);
 
   const meta = data?.byPlatform.META;
@@ -105,13 +110,13 @@ export function AnalyticsClient() {
             </p>
           </div>
           <div>
-            <p className="text-xs text-[var(--muted-foreground)]">Conversoes</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Conversões</p>
             <p className="text-lg font-bold text-[var(--foreground)]">
               {metrics ? metrics.conversions.toLocaleString("pt-PT") : "--"}
             </p>
           </div>
           <div>
-            <p className="text-xs text-[var(--muted-foreground)]">Impressoes</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Impressões</p>
             <p className="text-lg font-bold text-[var(--foreground)]">
               {metrics ? metrics.impressions.toLocaleString("pt-PT") : "--"}
             </p>
@@ -129,7 +134,7 @@ export function AnalyticsClient() {
             Analytics
           </h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Comparacao de performance entre Meta e Google Ads
+            Comparação de performance entre Meta e Google Ads
           </p>
         </div>
         <select
@@ -137,14 +142,26 @@ export function AnalyticsClient() {
           onChange={(e) => setDays(Number(e.target.value))}
           className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)]"
         >
-          <option value={7}>Ultimos 7 dias</option>
-          <option value={14}>Ultimos 14 dias</option>
-          <option value={30}>Ultimos 30 dias</option>
-          <option value={60}>Ultimos 60 dias</option>
-          <option value={90}>Ultimos 90 dias</option>
+          <option value={7}>Últimos 7 dias</option>
+          <option value={14}>Últimos 14 dias</option>
+          <option value={30}>Últimos 30 dias</option>
+          <option value={60}>Últimos 60 dias</option>
+          <option value={90}>Últimos 90 dias</option>
         </select>
       </div>
 
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]" />
+        </div>
+      ) : (
+      <>
       {/* Platform Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <PlatformCard name="Meta Ads" color="#1877F2" icon="f" metrics={meta} />
@@ -154,7 +171,7 @@ export function AnalyticsClient() {
       {/* Comparison Bar Chart */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 mb-8">
         <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-          Comparacao Meta vs Google
+          Comparação Meta vs Google
         </h2>
         {data ? (
           <div className="h-72">
@@ -182,7 +199,7 @@ export function AnalyticsClient() {
           </div>
         ) : (
           <div className="h-72 flex items-center justify-center text-[var(--muted-foreground)]">
-            <p className="text-sm">Conecta as tuas contas para ver comparacao</p>
+            <p className="text-sm">Conecta as tuas contas para ver comparação</p>
           </div>
         )}
       </div>
@@ -190,7 +207,7 @@ export function AnalyticsClient() {
       {/* Trend Chart */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
         <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-          Tendencia de Gasto
+          Tendência de Gasto
         </h2>
         {data?.daily?.length ? (
           <div className="h-72">
@@ -233,17 +250,19 @@ export function AnalyticsClient() {
                   stroke="#22c55e"
                   strokeWidth={2}
                   dot={false}
-                  name="Conversoes"
+                  name="Conversões"
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         ) : (
           <div className="h-72 flex items-center justify-center text-[var(--muted-foreground)]">
-            <p className="text-sm">Sem dados de tendencia</p>
+            <p className="text-sm">Sem dados de tendência</p>
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

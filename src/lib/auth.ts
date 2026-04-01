@@ -6,15 +6,14 @@ import { prisma } from "./db";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/adwords",
+          scope: "openid email profile https://www.googleapis.com/auth/adwords",
           access_type: "offline",
           prompt: "consent",
         },
@@ -25,21 +24,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.META_APP_SECRET!,
       authorization: {
         params: {
-          scope: "ads_management,ads_read,business_management",
+          scope: "public_profile,ads_management,ads_read,business_management",
         },
       },
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/settings",
+    signIn: "/login",
+    error: "/login",
   },
 });
 

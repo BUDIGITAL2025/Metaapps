@@ -8,6 +8,15 @@ const PROVIDERS: Record<Platform, "google" | "facebook"> = {
   GOOGLE: "google",
 };
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout após ${ms / 1000}s`)), ms)
+    ),
+  ]);
+}
+
 export async function syncAllAccounts(userId: string) {
   const adAccounts = await prisma.adAccount.findMany({
     where: { userId, isActive: true },
@@ -30,7 +39,7 @@ export async function syncAllAccounts(userId: string) {
         continue;
       }
 
-      await syncAccount(account, token);
+      await withTimeout(syncAccount(account, token), 30000);
       results.push({ account: account.accountName, status: "synced" });
     } catch (error) {
       results.push({

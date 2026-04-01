@@ -98,7 +98,7 @@ export function PerformanceChart({ data }: { data: DailyData[] }) {
               stroke="#f59e0b"
               strokeWidth={2}
               dot={false}
-              name="Conversoes"
+              name="Conversões"
             />
           </LineChart>
         </ResponsiveContainer>

@@ -5,6 +5,8 @@ import { PlatformFilter } from "./PlatformFilter";
 import { MetricsCards } from "./MetricsCards";
 import { CampaignTable } from "./CampaignTable";
 import { PerformanceChart } from "./PerformanceChart";
+import { HealthScore } from "./HealthScore";
+import { AIInsights } from "./AIInsights";
 
 type Platform = "ALL" | "META" | "GOOGLE";
 
@@ -25,9 +27,11 @@ export function DashboardClient() {
   }>>([]);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [metricsRes, campaignsRes] = await Promise.all([
         fetch(`/api/metrics?platform=${platform}`),
@@ -41,7 +45,7 @@ export function DashboardClient() {
         setCampaigns(await campaignsRes.json());
       }
     } catch {
-      // API not available yet
+      setError("Não foi possível carregar os dados. Verifica a tua ligação.");
     }
     setLoading(false);
   }, [platform]);
@@ -52,11 +56,18 @@ export function DashboardClient() {
 
   async function handleSync() {
     setSyncing(true);
+    setError(null);
     try {
-      await fetch("/api/sync", { method: "POST" });
+      const res = await fetch("/api/sync", { method: "POST" });
+      const data = await res.json();
+      const synced = data.results?.filter((r: { status: string }) => r.status === "synced").length ?? 0;
+      const errors = data.results?.filter((r: { status: string }) => r.status === "error").length ?? 0;
+      if (errors > 0) {
+        setError(`Sincronizado: ${synced} conta(s). Erros: ${errors} conta(s).`);
+      }
       await fetchData();
     } catch {
-      // Sync failed
+      setError("Falha ao sincronizar. Tenta novamente.");
     }
     setSyncing(false);
   }
@@ -69,7 +80,7 @@ export function DashboardClient() {
             Dashboard
           </h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Visao geral das tuas campanhas Meta e Google Ads
+            Visão geral das tuas campanhas Meta e Google Ads
           </p>
         </div>
         <button
@@ -83,12 +94,24 @@ export function DashboardClient() {
 
       <PlatformFilter selected={platform} onChange={setPlatform} />
 
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="text-[var(--muted-foreground)] text-sm">A carregar...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]" />
         </div>
       ) : (
         <>
+          {/* Health Score + Insights */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <HealthScore />
+            <AIInsights />
+          </div>
+
           <MetricsCards
             totals={
               metrics?.totals

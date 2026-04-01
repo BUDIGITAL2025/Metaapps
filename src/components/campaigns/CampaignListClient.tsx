@@ -23,13 +23,18 @@ export function CampaignListClient() {
   const [platform, setPlatform] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     fetch(`/api/campaigns?platform=${platform}&status=${status}`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setCampaigns)
-      .catch(() => [])
+      .catch(() => {
+        setError("Não foi possível carregar as campanhas.");
+        return [];
+      })
       .finally(() => setLoading(false));
   }, [platform, status]);
 
@@ -102,17 +107,23 @@ export function CampaignListClient() {
         </select>
       </div>
 
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
         {loading ? (
-          <div className="text-center py-12 text-[var(--muted-foreground)] text-sm">
-            A carregar...
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]" />
           </div>
         ) : campaigns.length === 0 ? (
           <div className="text-center py-12 text-[var(--muted-foreground)]">
             <p className="text-sm">Nenhuma campanha encontrada</p>
             <p className="text-xs mt-1">
               Conecta as tuas contas em{" "}
-              <a href="/settings" className="text-[var(--primary)] underline">Definicoes</a>{" "}
+              <a href="/settings" className="text-[var(--primary)] underline">Definições</a>{" "}
               ou{" "}
               <a href="/campaigns/create" className="text-[var(--primary)] underline">cria novas campanhas</a>
             </p>
